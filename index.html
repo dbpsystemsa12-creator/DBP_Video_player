@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Optimized for mobile: disables zooming to feel like a native app -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#d32f2f"> <!-- DBP Brand Red -->
+    <title>DBP Video Player</title>
+    
+    <!-- Link to PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <style>
+        :root {
+            --dbp-red: #d32f2f;
+            --dbp-dark: #121212;
+            --dbp-surface: #1e1e1e;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--dbp-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* DBP Branded Header */
+        header {
+            background-color: var(--dbp-surface);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid var(--dbp-red);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        .brand-logo span {
+            color: var(--dbp-red);
+        }
+
+        main {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .upload-btn-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .btn-upload {
+            border: 2px dashed var(--dbp-red);
+            color: var(--dbp-red);
+            background-color: transparent;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .upload-btn-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            display: none; /* Hidden until loaded */
+        }
+
+        /* Mobile-friendly Controls */
+        .controls-container {
+            width: 100%;
+            background: var(--dbp-surface);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            box-sizing: border-box;
+            display: none; /* Hidden until loaded */
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .speed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .speed-value {
+            color: var(--dbp-red);
+            font-size: 1.3rem;
+        }
+
+        /* Android/Touch Friendly Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 5px;
+            outline: none;
+            margin: 15px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--dbp-red);
+            cursor: pointer;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .preset-buttons button {
+            flex: 1 1 calc(33% - 10px);
+            min-width: 70px;
+            padding: 12px 5px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent; /* Removes blue tap box on Android */
+        }
+
+        .preset-buttons button:active {
+            background: var(--dbp-red);
+        }
+
+        .shortcuts-hint {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 class="brand-logo">DBP <span>PLAYER</span></h1>
+    </header>
+
+    <main>
+        <div class="upload-btn-wrapper" id="uploadWrapper">
+            <button class="btn-upload">Tap to Choose Video</button>
+            <input type="file" id="videoUpload" accept="video/*">
+        </div>
+
+        <!-- Native video controls used for better low-end device hardware acceleration -->
+        <video id="videoPlayer" controls playsinline></video>
+
+        <div class="controls-container" id="controlsPanel">
+            <div class="speed-header">
+                <span>Playback Speed</span>
+                <span class="speed-value" id="speedDisplay">1.00x</span>
+            </div>
+            
+            <input type="range" id="speedSlider" min="0.1" max="3" step="0.05" value="1">
+            
+            <div class="preset-buttons">
+                <button onclick="setSpeed(0.1)">0.10x</button>
+                <button onclick="setSpeed(0.5)">0.50x</button>
+                <button onclick="setSpeed(1.0)">1.00x</button>
+                <button onclick="setSpeed(1.5)">1.50x</button>
+                <button onclick="setSpeed(2.0)">2.00x</button>
+                <button onclick="setSpeed(3.0)">3.00x</button>
+            </div>
+        </div>
+
+        <div class="shortcuts-hint">
+            <strong>Desktop Shortcuts:</strong><br>
+            Space/K: Play/Pause • F: Fullscreen • M: Mute<br>
+            J/L: -10s / +10s • Arrows: ±5s / Volume<br>
+            < / >: Speed Down / Up
+        </div>
+    </main>
+
+    <script>
+        const videoUpload = document.getElementById('videoUpload');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const controlsPanel = document.getElementById('controlsPanel');
+
+        // File Upload Handler
+        videoUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const fileURL = URL.createObjectURL(file);
+                videoPlayer.src = fileURL;
+                videoPlayer.style.display = 'block';
+                controlsPanel.style.display = 'flex';
+                setSpeed(1);
+                videoPlayer.play();
+            }
+        });
+
+        // Speed Control Handlers
+        speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
+
+        function setSpeed(speed) {
+            let numSpeed = parseFloat(speed);
+            // Clamp speed between 0.1 and 3.0
+            if (numSpeed < 0.1) numSpeed = 0.1;
+            if (numSpeed > 3.0) numSpeed = 3.0;
+
+            videoPlayer.playbackRate = numSpeed;
+            speedSlider.value = numSpeed;
+            speedDisplay.textContent = numSpeed.toFixed(2) + 'x';
+        }
+
+        // YouTube-style Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (!videoPlayer.src) return; // Ignore if no video loaded
+
+            // Prevent default browser scrolling for Space and Arrow keys
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            switch(e.key.toLowerCase()) {
+                case ' ': // Spacebar
+                case 'k':
+                    videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
+                    break;
+                case 'f':
+                    if (!document.fullscreenElement) {
+                        videoPlayer.requestFullscreen().catch(err => console.log(err));
+                    } else {
+                        document.exitFullscreen();
+                    }
+                    break;
+                case 'j':
+                    videoPlayer.currentTime -= 10;
+                    break;
+                case 'l':
+                    videoPlayer.currentTime += 10;
+                    break;
+                case 'm':
+                    videoPlayer.muted = !videoPlayer.muted;
+                    break;
+                case 'arrowleft':
+                    videoPlayer.currentTime -= 5;
+                    break;
+                case 'arrowright':
+                    videoPlayer.currentTime += 5;
+                    break;
+                case 'arrowup':
+                    videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
+                    break;
+                case 'arrowdown':
+                    videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+                    break;
+                case '<':
+                case ',':
+                    setSpeed(videoPlayer.playbackRate - 0.05);
+                    break;
+                case '>':
+                case '.':
+                    setSpeed(videoPlayer.playbackRate + 0.05);
+                    break;
+            }
+        });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('SW Registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
