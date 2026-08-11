@@ -1,16 +1,17 @@
 {
   "name": "DBP Video Player",
   "short_name": "DBP Player",
-  "description": "A fast, private video speed controller.",
+  "description": "Fast local video playback speed controller",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#d32f2f",
   "icons": [
     {
-      "src": "https://upload.wikimedia.org/wikipedia/commons/4/44/Play_button_icon.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
+      "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/OOjs_UI_icon_play-ltr.svg/512px-OOjs_UI_icon_play-ltr.svg.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
