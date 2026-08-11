@@ -2,12 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Optimized for mobile: disables zooming to feel like a native app -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#d32f2f"> <!-- DBP Brand Red -->
+    <meta name="theme-color" content="#d32f2f">
     <title>DBP Video Player</title>
     
-    <!-- Link to PWA Manifest -->
     <link rel="manifest" href="manifest.json">
 
     <style>
@@ -31,12 +29,12 @@
             overflow-x: hidden;
         }
 
-        /* DBP Branded Header */
         header {
             background-color: var(--dbp-surface);
-            padding: 15px 20px;
+            padding: 12px 20px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             border-bottom: 2px solid var(--dbp-red);
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             position: sticky;
@@ -45,7 +43,7 @@
         }
 
         .brand-logo {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: 900;
             letter-spacing: 2px;
             color: var(--text-main);
@@ -54,6 +52,18 @@
 
         .brand-logo span {
             color: var(--dbp-red);
+        }
+
+        #installBtn {
+            display: none; 
+            background-color: var(--dbp-red);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
         }
 
         main {
@@ -68,15 +78,14 @@
             box-sizing: border-box;
         }
 
-        .upload-btn-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            margin-bottom: 20px;
+        /* Fixed Mobile-friendly File Upload */
+        .upload-wrapper {
             width: 100%;
+            margin-bottom: 20px;
         }
 
         .btn-upload {
+            display: block;
             border: 2px dashed var(--dbp-red);
             color: var(--dbp-red);
             background-color: transparent;
@@ -87,28 +96,24 @@
             width: 100%;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s;
+            box-sizing: border-box;
         }
 
-        .upload-btn-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-            height: 100%;
+        #videoUpload {
+            display: none; /* Hidden strictly through CSS, label triggers it */
         }
 
+        /* Fixed Vertical Video overflow */
         video {
             width: 100%;
+            max-height: 50vh; /* Prevents vertical videos from taking over the screen */
+            object-fit: contain;
             border-radius: 8px;
             background: #000;
             box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            display: none; /* Hidden until loaded */
+            display: none;
         }
 
-        /* Mobile-friendly Controls */
         .controls-container {
             width: 100%;
             background: var(--dbp-surface);
@@ -116,7 +121,7 @@
             border-radius: 8px;
             margin-top: 15px;
             box-sizing: border-box;
-            display: none; /* Hidden until loaded */
+            display: none;
             flex-direction: column;
             gap: 15px;
         }
@@ -134,7 +139,6 @@
             font-size: 1.3rem;
         }
 
-        /* Android/Touch Friendly Slider */
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
@@ -172,7 +176,7 @@
             border-radius: 6px;
             font-size: 1rem;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent; /* Removes blue tap box on Android */
+            -webkit-tap-highlight-color: transparent;
         }
 
         .preset-buttons button:active {
@@ -194,15 +198,15 @@
 
     <header>
         <h1 class="brand-logo">DBP <span>PLAYER</span></h1>
+        <button id="installBtn">📲 Install App</button>
     </header>
 
     <main>
-        <div class="upload-btn-wrapper" id="uploadWrapper">
-            <button class="btn-upload">Tap to Choose Video</button>
+        <div class="upload-wrapper">
+            <label class="btn-upload" for="videoUpload">Tap to Choose Video</label>
             <input type="file" id="videoUpload" accept="video/*">
         </div>
 
-        <!-- Native video controls used for better low-end device hardware acceleration -->
         <video id="videoPlayer" controls playsinline></video>
 
         <div class="controls-container" id="controlsPanel">
@@ -224,10 +228,10 @@
         </div>
 
         <div class="shortcuts-hint">
-            <strong>Desktop Shortcuts:</strong><br>
+            <strong>Shortcuts:</strong><br>
             Space/K: Play/Pause • F: Fullscreen • M: Mute<br>
             J/L: -10s / +10s • Arrows: ±5s / Volume<br>
-            < / >: Speed Down / Up
+            &lt; / &gt;: Speed Down / Up
         </div>
     </main>
 
@@ -237,8 +241,30 @@
         const speedSlider = document.getElementById('speedSlider');
         const speedDisplay = document.getElementById('speedDisplay');
         const controlsPanel = document.getElementById('controlsPanel');
+        const installBtn = document.getElementById('installBtn');
 
-        // File Upload Handler
+        let deferredPrompt;
+
+        // PWA Install Logic
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        installBtn.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+
+        // File Upload Logic
         videoUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
@@ -248,34 +274,43 @@
                 controlsPanel.style.display = 'flex';
                 setSpeed(1);
                 videoPlayer.play();
+                
+                // Clear the input so you can upload the same file again if needed
+                videoUpload.value = '';
             }
         });
 
-        // Speed Control Handlers
+        // Speed Logic
         speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
 
         function setSpeed(speed) {
-            let numSpeed = parseFloat(speed);
-            // Clamp speed between 0.1 and 3.0
+            // Fixes Javascript decimal math errors (e.g., 1.050000001)
+            let numSpeed = Math.round(parseFloat(speed) * 100) / 100; 
+            
             if (numSpeed < 0.1) numSpeed = 0.1;
             if (numSpeed > 3.0) numSpeed = 3.0;
 
             videoPlayer.playbackRate = numSpeed;
             speedSlider.value = numSpeed;
             speedDisplay.textContent = numSpeed.toFixed(2) + 'x';
+
+            // Bug fix: Remove focus from buttons/sliders so spacebar doesn't double-trigger
+            if (document.activeElement) {
+                document.activeElement.blur();
+            }
         }
 
-        // YouTube-style Keyboard Shortcuts
+        // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
-            if (!videoPlayer.src) return; // Ignore if no video loaded
+            if (!videoPlayer.src) return;
 
-            // Prevent default browser scrolling for Space and Arrow keys
+            // Prevent page scrolling on standard media keys
             if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
                 e.preventDefault();
             }
 
             switch(e.key.toLowerCase()) {
-                case ' ': // Spacebar
+                case ' ':
                 case 'k':
                     videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
                     break;
@@ -287,7 +322,7 @@
                     }
                     break;
                 case 'j':
-                    videoPlayer.currentTime -= 10;
+                    videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
                     break;
                 case 'l':
                     videoPlayer.currentTime += 10;
@@ -296,7 +331,7 @@
                     videoPlayer.muted = !videoPlayer.muted;
                     break;
                 case 'arrowleft':
-                    videoPlayer.currentTime -= 5;
+                    videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 5);
                     break;
                 case 'arrowright':
                     videoPlayer.currentTime += 5;
@@ -318,11 +353,11 @@
             }
         });
 
-        // PWA Service Worker Registration
+        // Register Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').catch(err => {
-                    console.log('SW Registration failed: ', err);
+                    console.log('SW registration failed: ', err);
                 });
             });
         }
