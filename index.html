@@ -78,7 +78,6 @@
             box-sizing: border-box;
         }
 
-        /* Fixed Mobile-friendly File Upload */
         .upload-wrapper {
             width: 100%;
             margin-bottom: 20px;
@@ -100,13 +99,12 @@
         }
 
         #videoUpload {
-            display: none; /* Hidden strictly through CSS, label triggers it */
+            display: none;
         }
 
-        /* Fixed Vertical Video overflow */
         video {
             width: 100%;
-            max-height: 50vh; /* Prevents vertical videos from taking over the screen */
+            max-height: 50vh;
             object-fit: contain;
             border-radius: 8px;
             background: #000;
@@ -274,8 +272,6 @@
                 controlsPanel.style.display = 'flex';
                 setSpeed(1);
                 videoPlayer.play();
-                
-                // Clear the input so you can upload the same file again if needed
                 videoUpload.value = '';
             }
         });
@@ -284,7 +280,6 @@
         speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
 
         function setSpeed(speed) {
-            // Fixes Javascript decimal math errors (e.g., 1.050000001)
             let numSpeed = Math.round(parseFloat(speed) * 100) / 100; 
             
             if (numSpeed < 0.1) numSpeed = 0.1;
@@ -293,24 +288,33 @@
             videoPlayer.playbackRate = numSpeed;
             speedSlider.value = numSpeed;
             speedDisplay.textContent = numSpeed.toFixed(2) + 'x';
-
-            // Bug fix: Remove focus from buttons/sliders so spacebar doesn't double-trigger
-            if (document.activeElement) {
-                document.activeElement.blur();
-            }
         }
 
-        // Keyboard Shortcuts
-        document.addEventListener('keydown', (e) => {
+        // Keyboard Shortcuts Fix: Using "capture: true" intercepts the key before native elements do
+        window.addEventListener('keydown', (e) => {
             if (!videoPlayer.src) return;
 
-            // Prevent page scrolling on standard media keys
-            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-                e.preventDefault();
+            // 1. Completely hijack the Spacebar so it NEVER triggers buttons or native video double-toggles
+            if (e.code === 'Space') {
+                e.preventDefault(); 
+                e.stopPropagation();
+                videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
+                return; // Stop running the rest of the script for the spacebar
             }
 
+            // 2. Prevent Arrow keys from scrolling the page
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                // Only allow native arrow keys if the user is actively dragging the slider
+                const isSliderFocused = document.activeElement && document.activeElement.type === 'range';
+                if (!isSliderFocused) {
+                    e.preventDefault();
+                } else {
+                    return; // Let the slider handle the arrows natively
+                }
+            }
+
+            // 3. Process the rest of the commands
             switch(e.key.toLowerCase()) {
-                case ' ':
                 case 'k':
                     videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
                     break;
@@ -351,16 +355,7 @@
                     setSpeed(videoPlayer.playbackRate + 0.05);
                     break;
             }
-        });
-
-        // Register Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => {
-                    console.log('SW registration failed: ', err);
-                });
-            });
-        }
+        }, { capture: true }); // <-- This is the magic lock that forces the browser to obey our shortcuts first
     </script>
 </body>
 </html>
