@@ -4,21 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#d32f2f">
-    <title>DBP Video Player</title>
+    <title>DBP Video Player & Trimmer</title>
     
     <link rel="manifest" href="manifest.json">
 
     <style>
         :root {
             --dbp-red: #d32f2f;
+            --dbp-red-hover: #b71c1c;
             --dbp-dark: #121212;
             --dbp-surface: #1e1e1e;
+            --dbp-surface-light: #2a2a2a;
             --text-main: #ffffff;
             --text-muted: #aaaaaa;
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--dbp-dark);
             color: var(--text-main);
             margin: 0;
@@ -59,28 +65,32 @@
             background-color: var(--dbp-red);
             color: white;
             border: none;
-            padding: 8px 14px;
+            padding: 8px 16px;
             border-radius: 20px;
             font-weight: bold;
             font-size: 0.85rem;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #installBtn:hover {
+            background-color: var(--dbp-red-hover);
         }
 
         main {
-            padding: 20px;
+            padding: 20px 16px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             width: 100%;
-            box-sizing: border-box;
         }
 
         .upload-wrapper {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .btn-upload {
@@ -88,70 +98,219 @@
             border: 2px dashed var(--dbp-red);
             color: var(--dbp-red);
             background-color: transparent;
-            padding: 15px 20px;
+            padding: 14px 20px;
             border-radius: 8px;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: bold;
             width: 100%;
             text-align: center;
             cursor: pointer;
-            box-sizing: border-box;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .btn-upload:hover {
+            background-color: rgba(211, 47, 47, 0.1);
         }
 
         #videoUpload {
             display: none;
         }
 
+        .video-container {
+            width: 100%;
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+
         video {
             width: 100%;
-            max-height: 50vh;
+            max-height: 55vh;
             object-fit: contain;
-            border-radius: 8px;
-            background: #000;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-            display: none;
+            display: block;
+            outline: none;
         }
 
-        .controls-container {
+        .card {
             width: 100%;
             background: var(--dbp-surface);
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 15px;
-            box-sizing: border-box;
+            padding: 18px 20px;
+            border-radius: 10px;
+            margin-top: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
             display: none;
             flex-direction: column;
-            gap: 15px;
+            gap: 14px;
         }
 
-        .speed-header {
+        .card-title {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-weight: bold;
-            font-size: 1.1rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
         }
 
-        .speed-value {
+        .card-title span.badge {
             color: var(--dbp-red);
-            font-size: 1.3rem;
+            font-size: 1.15rem;
+            font-family: monospace;
         }
 
-        input[type="range"] {
+        /* Dual Range Trimmer Track */
+        .trimmer-track-wrapper {
+            position: relative;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .track-background {
+            position: absolute;
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+        }
+
+        .track-selected-range {
+            position: absolute;
+            height: 10px;
+            background: var(--dbp-red);
+            border-radius: 5px;
+            z-index: 1;
+        }
+
+        .range-slider {
+            position: absolute;
+            width: 100%;
+            height: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            pointer-events: none;
+            margin: 0;
+            z-index: 2;
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid var(--dbp-red);
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .range-slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid var(--dbp-red);
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .range-slider::-webkit-slider-thumb:active {
+            transform: scale(1.25);
+        }
+
+        .trimmer-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            background: var(--dbp-surface-light);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .trimmer-meta span.label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .trimmer-meta span.val {
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
+        }
+
+        button.action-btn {
+            background: var(--dbp-surface-light);
+            color: white;
+            border: 1px solid #444;
+            padding: 10px 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        button.action-btn:hover {
+            background: #383838;
+            border-color: #666;
+        }
+
+        button.action-btn:active {
+            transform: translateY(1px);
+        }
+
+        button.action-btn.primary {
+            background: var(--dbp-red);
+            border-color: var(--dbp-red);
+            color: #fff;
+        }
+
+        button.action-btn.primary:hover {
+            background: var(--dbp-red-hover);
+        }
+
+        button.action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Speed slider */
+        input[type="range"].speed-slider {
             -webkit-appearance: none;
             width: 100%;
             height: 8px;
             background: #333;
             border-radius: 5px;
             outline: none;
-            margin: 15px 0;
+            margin: 10px 0;
         }
 
-        input[type="range"]::-webkit-slider-thumb {
+        input[type="range"].speed-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             background: var(--dbp-red);
             cursor: pointer;
@@ -159,26 +318,45 @@
 
         .preset-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            justify-content: center;
         }
 
         .preset-buttons button {
-            flex: 1 1 calc(33% - 10px);
-            min-width: 70px;
-            padding: 12px 5px;
-            background: #333;
+            flex: 1 1 calc(16.66% - 8px);
+            min-width: 55px;
+            padding: 10px 4px;
+            background: var(--dbp-surface-light);
             color: white;
-            border: none;
+            border: 1px solid #333;
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
             cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
+            transition: 0.2s;
         }
 
-        .preset-buttons button:active {
+        .preset-buttons button.active {
             background: var(--dbp-red);
+            border-color: var(--dbp-red);
+        }
+
+        /* Export Progress Bar */
+        .progress-bar-wrap {
+            display: none;
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: #4caf50;
+            transition: width 0.1s linear;
         }
 
         .shortcuts-hint {
@@ -187,8 +365,10 @@
             color: var(--text-muted);
             text-align: center;
             background: rgba(0,0,0,0.2);
-            padding: 15px;
+            padding: 14px;
             border-radius: 8px;
+            line-height: 1.6;
+            width: 100%;
         }
     </style>
 </head>
@@ -201,47 +381,122 @@
 
     <main>
         <div class="upload-wrapper">
-            <label class="btn-upload" for="videoUpload">Tap to Choose Video</label>
+            <label class="btn-upload" for="videoUpload">📁 Choose Video</label>
             <input type="file" id="videoUpload" accept="video/*">
         </div>
 
-        <video id="videoPlayer" controls playsinline></video>
+        <div class="video-container" id="videoContainer">
+            <video id="videoPlayer" playsinline controls></video>
+        </div>
 
-        <div class="controls-container" id="controlsPanel">
-            <div class="speed-header">
-                <span>Playback Speed</span>
-                <span class="speed-value" id="speedDisplay">1.00x</span>
+        <!-- Trimmer Section -->
+        <div class="card" id="trimmerPanel">
+            <div class="card-title">
+                <span>✂️ Video Trimmer</span>
+                <span class="badge" id="clipDuration">00:00.0</span>
+            </div>
+
+            <div class="trimmer-track-wrapper">
+                <div class="track-background"></div>
+                <div class="track-selected-range" id="selectedRange"></div>
+                <input type="range" id="trimStartSlider" class="range-slider" min="0" max="100" step="0.05" value="0">
+                <input type="range" id="trimEndSlider" class="range-slider" min="0" max="100" step="0.05" value="100">
+            </div>
+
+            <div class="trimmer-meta">
+                <div>
+                    <span class="label">START TIME</span>
+                    <span class="val" id="startTimeDisplay">00:00.0</span>
+                </div>
+                <div>
+                    <span class="label">CURRENT POS</span>
+                    <span class="val" id="currentPosDisplay">00:00.0</span>
+                </div>
+                <div>
+                    <span class="label">END TIME</span>
+                    <span class="val" id="endTimeDisplay">00:00.0</span>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="action-btn" id="btnSetStart">Set Start [</button>
+                <button class="action-btn" id="btnSetEnd">] Set End</button>
+                <button class="action-btn" id="btnPreviewTrim">▶ Preview Cut</button>
+                <button class="action-btn primary" id="btnExportTrim">💾 Trim & Download</button>
+            </div>
+
+            <div class="progress-bar-wrap" id="progressWrap">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+        </div>
+
+        <!-- Speed Section -->
+        <div class="card" id="controlsPanel">
+            <div class="card-title">
+                <span>⚡ Playback Speed</span>
+                <span class="badge" id="speedDisplay">1.00x</span>
             </div>
             
-            <input type="range" id="speedSlider" min="0.1" max="3" step="0.05" value="1">
+            <input type="range" id="speedSlider" class="speed-slider" min="0.1" max="3" step="0.05" value="1">
             
             <div class="preset-buttons">
-                <button onclick="setSpeed(0.1)">0.10x</button>
-                <button onclick="setSpeed(0.5)">0.50x</button>
-                <button onclick="setSpeed(1.0)">1.00x</button>
-                <button onclick="setSpeed(1.5)">1.50x</button>
-                <button onclick="setSpeed(2.0)">2.00x</button>
-                <button onclick="setSpeed(3.0)">3.00x</button>
+                <button class="preset-btn" data-speed="0.25">0.25x</button>
+                <button class="preset-btn" data-speed="0.5">0.50x</button>
+                <button class="preset-btn active" data-speed="1.0">1.00x</button>
+                <button class="preset-btn" data-speed="1.5">1.50x</button>
+                <button class="preset-btn" data-speed="2.0">2.00x</button>
+                <button class="preset-btn" data-speed="3.0">3.00x</button>
             </div>
         </div>
 
         <div class="shortcuts-hint">
-            <strong>Shortcuts:</strong><br>
-            Space/K: Play/Pause • F: Fullscreen • M: Mute<br>
-            J/L: -10s / +10s • Arrows: ±5s / Volume<br>
-            &lt; / &gt;: Speed Down / Up
+            <strong>Keyboard Shortcuts:</strong><br>
+            <strong>Space / K:</strong> Play/Pause &bull; <strong>F:</strong> Fullscreen &bull; <strong>M:</strong> Mute<br>
+            <strong>J / L:</strong> -10s / +10s &bull; <strong>Left / Right:</strong> -5s / +5s &bull; <strong>Up / Down:</strong> Vol ±10%<br>
+            <strong>[ / ]:</strong> Mark Trim Start / End &bull; <strong>P:</strong> Preview Trim &bull; <strong>&lt; / &gt;:</strong> Speed ±0.05x
         </div>
     </main>
 
     <script>
+        // DOM Elements
         const videoUpload = document.getElementById('videoUpload');
+        const videoContainer = document.getElementById('videoContainer');
         const videoPlayer = document.getElementById('videoPlayer');
+        
+        const trimmerPanel = document.getElementById('trimmerPanel');
+        const trimStartSlider = document.getElementById('trimStartSlider');
+        const trimEndSlider = document.getElementById('trimEndSlider');
+        const selectedRange = document.getElementById('selectedRange');
+        const startTimeDisplay = document.getElementById('startTimeDisplay');
+        const currentPosDisplay = document.getElementById('currentPosDisplay');
+        const endTimeDisplay = document.getElementById('endTimeDisplay');
+        const clipDuration = document.getElementById('clipDuration');
+        const btnSetStart = document.getElementById('btnSetStart');
+        const btnSetEnd = document.getElementById('btnSetEnd');
+        const btnPreviewTrim = document.getElementById('btnPreviewTrim');
+        const btnExportTrim = document.getElementById('btnExportTrim');
+        const progressWrap = document.getElementById('progressWrap');
+        const progressBar = document.getElementById('progressBar');
+
+        const controlsPanel = document.getElementById('controlsPanel');
         const speedSlider = document.getElementById('speedSlider');
         const speedDisplay = document.getElementById('speedDisplay');
-        const controlsPanel = document.getElementById('controlsPanel');
+        const presetButtons = document.querySelectorAll('.preset-btn');
         const installBtn = document.getElementById('installBtn');
 
+        let currentBlobUrl = null;
+        let trimStart = 0;
+        let trimEnd = 0;
+        let isPreviewing = false;
+        let isExporting = false;
         let deferredPrompt;
+
+        // Auto-blur ALL buttons when clicked so they don't capture spacebar hits
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.blur();
+            });
+        });
 
         // PWA Install Logic
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -253,8 +508,8 @@
         installBtn.addEventListener('click', () => {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
+                deferredPrompt.userChoice.then((choice) => {
+                    if (choice.outcome === 'accepted') {
                         installBtn.style.display = 'none';
                     }
                     deferredPrompt = null;
@@ -262,100 +517,343 @@
             }
         });
 
-        // File Upload Logic
+        // Time Formatter
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return "00:00.0";
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const tenths = Math.floor((seconds % 1) * 10);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
+        }
+
+        // File Upload Handling
         videoUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) {
-                const fileURL = URL.createObjectURL(file);
-                videoPlayer.src = fileURL;
-                videoPlayer.style.display = 'block';
-                controlsPanel.style.display = 'flex';
-                setSpeed(1);
-                videoPlayer.play();
-                videoUpload.value = '';
+            if (!file) return;
+
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+            }
+
+            currentBlobUrl = URL.createObjectURL(file);
+            videoPlayer.src = currentBlobUrl;
+            videoContainer.style.display = 'block';
+            trimmerPanel.style.display = 'flex';
+            controlsPanel.style.display = 'flex';
+            setSpeed(1.0);
+
+            videoPlayer.load();
+            videoPlayer.play().catch(() => {});
+        });
+
+        // Video Metadata Loaded
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            const duration = videoPlayer.duration || 0;
+            trimStart = 0;
+            trimEnd = duration;
+
+            trimStartSlider.min = 0;
+            trimStartSlider.max = duration;
+            trimStartSlider.value = 0;
+
+            trimEndSlider.min = 0;
+            trimEndSlider.max = duration;
+            trimEndSlider.value = duration;
+
+            updateTrimmerUI();
+        });
+
+        // Track Current Playback Position
+        videoPlayer.addEventListener('timeupdate', () => {
+            currentPosDisplay.textContent = formatTime(videoPlayer.currentTime);
+
+            if (isPreviewing) {
+                if (videoPlayer.currentTime >= trimEnd) {
+                    videoPlayer.currentTime = trimStart;
+                    videoPlayer.play().catch(() => {});
+                }
             }
         });
 
-        // Speed Logic
-        speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
-
-        function setSpeed(speed) {
-            let numSpeed = Math.round(parseFloat(speed) * 100) / 100; 
+        // Trimmer Sliders Logic
+        function updateTrimmerUI() {
+            const duration = videoPlayer.duration || 1;
             
-            if (numSpeed < 0.1) numSpeed = 0.1;
-            if (numSpeed > 3.0) numSpeed = 3.0;
+            if (parseFloat(trimStartSlider.value) >= parseFloat(trimEndSlider.value)) {
+                trimStartSlider.value = Math.max(0, parseFloat(trimEndSlider.value) - 0.1);
+            }
+
+            trimStart = parseFloat(trimStartSlider.value);
+            trimEnd = parseFloat(trimEndSlider.value);
+
+            const leftPercent = (trimStart / duration) * 100;
+            const rightPercent = (trimEnd / duration) * 100;
+
+            selectedRange.style.left = `${leftPercent}%`;
+            selectedRange.style.width = `${Math.max(0, rightPercent - leftPercent)}%`;
+
+            startTimeDisplay.textContent = formatTime(trimStart);
+            endTimeDisplay.textContent = formatTime(trimEnd);
+            clipDuration.textContent = formatTime(Math.max(0, trimEnd - trimStart));
+        }
+
+        trimStartSlider.addEventListener('input', () => {
+            videoPlayer.currentTime = parseFloat(trimStartSlider.value);
+            updateTrimmerUI();
+        });
+
+        trimEndSlider.addEventListener('input', () => {
+            videoPlayer.currentTime = parseFloat(trimEndSlider.value);
+            updateTrimmerUI();
+        });
+
+        // Set Start / Set End Buttons
+        btnSetStart.addEventListener('click', () => {
+            const pos = Math.min(videoPlayer.currentTime, trimEnd - 0.1);
+            trimStartSlider.value = Math.max(0, pos);
+            updateTrimmerUI();
+        });
+
+        btnSetEnd.addEventListener('click', () => {
+            const pos = Math.max(videoPlayer.currentTime, trimStart + 0.1);
+            trimEndSlider.value = Math.min(videoPlayer.duration, pos);
+            updateTrimmerUI();
+        });
+
+        // Preview Trim
+        btnPreviewTrim.addEventListener('click', () => {
+            isPreviewing = !isPreviewing;
+            if (isPreviewing) {
+                btnPreviewTrim.textContent = "⏹ Stop Preview";
+                btnPreviewTrim.classList.add('primary');
+                videoPlayer.currentTime = trimStart;
+                videoPlayer.play().catch(() => {});
+            } else {
+                btnPreviewTrim.textContent = "▶ Preview Cut";
+                btnPreviewTrim.classList.remove('primary');
+                videoPlayer.pause();
+            }
+        });
+
+        // Lag-Free In-Browser Trimmer Export (MediaStream + MediaRecorder)
+        btnExportTrim.addEventListener('click', async () => {
+            if (isExporting || !videoPlayer.src) return;
+
+            isExporting = true;
+            isPreviewing = false;
+            btnPreviewTrim.textContent = "▶ Preview Cut";
+            btnPreviewTrim.classList.remove('primary');
+            
+            btnExportTrim.disabled = true;
+            btnExportTrim.textContent = "⏳ Processing...";
+            progressWrap.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            const originalSpeed = videoPlayer.playbackRate;
+            const originalMuted = videoPlayer.muted;
+            const originalCurrentTime = videoPlayer.currentTime;
+
+            videoPlayer.pause();
+            videoPlayer.currentTime = trimStart;
+            videoPlayer.playbackRate = 1.0; 
+            videoPlayer.muted = false;
+
+            await new Promise(r => {
+                const onSeek = () => {
+                    videoPlayer.removeEventListener('seeked', onSeek);
+                    r();
+                };
+                videoPlayer.addEventListener('seeked', onSeek);
+            });
+
+            try {
+                let stream;
+                if (videoPlayer.captureStream) {
+                    stream = videoPlayer.captureStream();
+                } else if (videoPlayer.mozCaptureStream) {
+                    stream = videoPlayer.mozCaptureStream();
+                } else {
+                    throw new Error("Stream capture not supported on this browser.");
+                }
+
+                const mimeType = MediaRecorder.isTypeSupported('video/mp4') 
+                    ? 'video/mp4' 
+                    : (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus' : 'video/webm');
+
+                const recorder = new MediaRecorder(stream, { mimeType });
+                const chunks = [];
+
+                recorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) chunks.push(e.data);
+                };
+
+                const totalDuration = trimEnd - trimStart;
+
+                const exportPromise = new Promise((resolve) => {
+                    recorder.onstop = () => {
+                        const blob = new Blob(chunks, { type: mimeType });
+                        const downloadUrl = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = downloadUrl;
+                        a.download = `dbp-trimmed-${Date.now()}.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000);
+                        resolve();
+                    };
+                });
+
+                recorder.start(100);
+                await videoPlayer.play();
+
+                const checkInterval = setInterval(() => {
+                    const elapsed = videoPlayer.currentTime - trimStart;
+                    const progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+                    progressBar.style.width = `${progress}%`;
+
+                    if (videoPlayer.currentTime >= trimEnd || videoPlayer.ended) {
+                        clearInterval(checkInterval);
+                        videoPlayer.pause();
+                        recorder.stop();
+                    }
+                }, 50);
+
+                await exportPromise;
+
+            } catch (err) {
+                console.error("Export Error:", err);
+                alert("Direct trimming export is unavailable on this browser format. Try using Chrome/Edge/Firefox or a standard MP4 file.");
+            } finally {
+                videoPlayer.currentTime = originalCurrentTime;
+                videoPlayer.playbackRate = originalSpeed;
+                videoPlayer.muted = originalMuted;
+                btnExportTrim.disabled = false;
+                btnExportTrim.textContent = "💾 Trim & Download";
+                progressWrap.style.display = 'none';
+                isExporting = false;
+            }
+        });
+
+        // Speed Control
+        function setSpeed(speed) {
+            let numSpeed = Math.round(parseFloat(speed) * 100) / 100;
+            numSpeed = Math.max(0.1, Math.min(3.0, numSpeed));
 
             videoPlayer.playbackRate = numSpeed;
             speedSlider.value = numSpeed;
             speedDisplay.textContent = numSpeed.toFixed(2) + 'x';
+
+            presetButtons.forEach(btn => {
+                const btnSpeed = parseFloat(btn.dataset.speed);
+                btn.classList.toggle('active', Math.abs(btnSpeed - numSpeed) < 0.01);
+            });
         }
 
-        // Keyboard Shortcuts Fix: Using "capture: true" intercepts the key before native elements do
+        speedSlider.addEventListener('input', (e) => setSpeed(e.target.value));
+
+        presetButtons.forEach(btn => {
+            btn.addEventListener('click', () => setSpeed(btn.dataset.speed));
+        });
+
+
+        /* =========================================================
+           BULLETPROOF KEYBOARD EVENT INTERCEPTION
+           Prevents 100% of native browser double-toggle behaviors
+        ========================================================= */
+
+        // 1. Intercept KeyDown in the "Capture" phase (before video player or buttons get it)
         window.addEventListener('keydown', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
             if (!videoPlayer.src) return;
 
-            // 1. Completely hijack the Spacebar so it NEVER triggers buttons or native video double-toggles
-            if (e.code === 'Space') {
-                e.preventDefault(); 
-                e.stopPropagation();
-                videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
-                return; // Stop running the rest of the script for the spacebar
+            const key = e.key.toLowerCase();
+            const dur = isNaN(videoPlayer.duration) ? 0 : videoPlayer.duration;
+
+            // ---- SPACEBAR / PLAY LOGIC ----
+            if (key === ' ' || key === 'k') {
+                e.preventDefault();   // Stops page scrolling
+                e.stopPropagation();  // Hides event from native video & buttons
+                
+                videoPlayer.paused ? videoPlayer.play().catch(() => {}) : videoPlayer.pause();
+                return;
             }
 
-            // 2. Prevent Arrow keys from scrolling the page
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-                // Only allow native arrow keys if the user is actively dragging the slider
-                const isSliderFocused = document.activeElement && document.activeElement.type === 'range';
-                if (!isSliderFocused) {
-                    e.preventDefault();
-                } else {
-                    return; // Let the slider handle the arrows natively
+            // ---- ARROW KEYS / SEEKING LOGIC ----
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+                // If user is actively using a slider, let the arrow keys move the slider natively
+                if (document.activeElement && document.activeElement.type === 'range') {
+                    return; 
                 }
+                
+                // Otherwise, hijack arrows for video seeking/volume
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (key === 'arrowleft') videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 5);
+                if (key === 'arrowright') videoPlayer.currentTime = Math.min(dur, videoPlayer.currentTime + 5);
+                if (key === 'arrowup') videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
+                if (key === 'arrowdown') videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+                return;
             }
 
-            // 3. Process the rest of the commands
-            switch(e.key.toLowerCase()) {
-                case 'k':
-                    videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
-                    break;
+            // ---- OTHER SHORTCUTS ----
+            switch (key) {
                 case 'f':
+                    e.preventDefault();
                     if (!document.fullscreenElement) {
-                        videoPlayer.requestFullscreen().catch(err => console.log(err));
+                        videoContainer.requestFullscreen().catch(() => {});
                     } else {
-                        document.exitFullscreen();
+                        document.exitFullscreen().catch(() => {});
                     }
                     break;
+                case 'm':
+                    e.preventDefault();
+                    videoPlayer.muted = !videoPlayer.muted;
+                    break;
                 case 'j':
+                    e.preventDefault();
                     videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
                     break;
                 case 'l':
-                    videoPlayer.currentTime += 10;
+                    e.preventDefault();
+                    videoPlayer.currentTime = Math.min(dur, videoPlayer.currentTime + 10);
                     break;
-                case 'm':
-                    videoPlayer.muted = !videoPlayer.muted;
+                case '[':
+                    e.preventDefault();
+                    btnSetStart.click();
                     break;
-                case 'arrowleft':
-                    videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 5);
+                case ']':
+                    e.preventDefault();
+                    btnSetEnd.click();
                     break;
-                case 'arrowright':
-                    videoPlayer.currentTime += 5;
-                    break;
-                case 'arrowup':
-                    videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
-                    break;
-                case 'arrowdown':
-                    videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+                case 'p':
+                    e.preventDefault();
+                    btnPreviewTrim.click();
                     break;
                 case '<':
                 case ',':
+                    e.preventDefault();
                     setSpeed(videoPlayer.playbackRate - 0.05);
                     break;
                 case '>':
                 case '.':
+                    e.preventDefault();
                     setSpeed(videoPlayer.playbackRate + 0.05);
                     break;
             }
-        }, { capture: true }); // <-- This is the magic lock that forces the browser to obey our shortcuts first
+        }, { capture: true }); // 'capture: true' is the lock that makes this work
+
+        // 2. Intercept KeyUp as well (stops buttons from firing on spacebar release)
+        window.addEventListener('keyup', (e) => {
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+            
+            if (e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, { capture: true });
+
     </script>
 </body>
 </html>
